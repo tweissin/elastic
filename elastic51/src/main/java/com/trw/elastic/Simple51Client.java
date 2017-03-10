@@ -4,6 +4,7 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
+import com.trw.Utils;
 import org.apache.http.HttpEntity;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
@@ -11,14 +12,18 @@ import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
 import org.elasticsearch.action.index.IndexResponse;
+import org.elasticsearch.action.update.UpdateRequest;
 import org.elasticsearch.client.transport.TransportClient;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.transport.InetSocketTransportAddress;
+import org.elasticsearch.script.Script;
 import org.elasticsearch.transport.client.PreBuiltTransportClient;
 
 import java.io.IOException;
 import java.net.InetAddress;
+import java.util.Collections;
 import java.util.Date;
+import java.util.HashMap;
 
 import static org.elasticsearch.common.xcontent.XContentFactory.jsonBuilder;
 
@@ -26,10 +31,44 @@ import static org.elasticsearch.common.xcontent.XContentFactory.jsonBuilder;
  * Created by tweissin on 3/9/17.
  */
 public class Simple51Client {
-    public static void main(String[] args) throws IOException {
+    public static void main(String[] args) throws Exception {
 
         createIndexWithTransportClient();
         createIndexWithHttpClient();
+
+        testOrdering();
+    }
+
+    private static void testOrdering() throws Exception {
+        try (
+                TransportClient client = new PreBuiltTransportClient(Settings.EMPTY)
+                        .addTransportAddress(new InetSocketTransportAddress(InetAddress.getByName("localhost"), 9300));
+        ) {
+            client.prepareDelete("twitter", "tweet", "1").get();
+
+            IndexResponse response = client.prepareIndex("twitter", "tweet", "1")
+                    .setSource(jsonBuilder()
+                            .startObject()
+                            .field("docs", Collections.EMPTY_LIST)
+                            .endObject()
+                    )
+                    .execute()
+                    .actionGet();
+
+
+            Utils.testOrdering(1, (currentDocNum) -> {
+                UpdateRequest updateRequest = new UpdateRequest("twitter", "tweet", "1")
+                        .script(new Script(Script.DEFAULT_SCRIPT_TYPE, Script.DEFAULT_SCRIPT_LANG, "ctx._source.docs.add(params.currentDoc)", new HashMap<String,Object>(){{
+                            put("currentDoc", currentDocNum);
+                        }}));
+                try {
+                    client.update(updateRequest).get();
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+                return true;
+            });
+        }
     }
 
     private static void createIndexWithHttpClient() throws IOException {

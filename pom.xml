@@ -11,6 +11,7 @@
     <modules>
         <module>elastic17</module>
         <module>elastic51</module>
+        <module>sharedlib</module>
     </modules>
 
     <dependencyManagement>
@@ -20,7 +21,16 @@
                 <artifactId>gson</artifactId>
                 <version>2.2.4</version>
             </dependency>
-
+            <dependency>
+                <groupId>org.apache.httpcomponents</groupId>
+                <artifactId>httpclient</artifactId>
+                <version>4.5.2</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.logging.log4j</groupId>
+                <artifactId>log4j-core</artifactId>
+                <version>2.7</version>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 
