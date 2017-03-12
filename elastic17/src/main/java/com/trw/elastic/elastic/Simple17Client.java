@@ -18,16 +18,20 @@ import org.elasticsearch.common.transport.InetSocketTransportAddress;
 import java.io.IOException;
 import java.util.Date;
 
+import static com.trw.Utils.initElasticSearchClient;
 import static org.elasticsearch.common.xcontent.XContentFactory.jsonBuilder;
 
 /**
  * Created by tweissin on 3/9/17.
  */
 public class Simple17Client {
+    public static final String INDEX = "twitter";
+    public static final String TYPE = "tweet";
+
     public static void main(String[] args) throws IOException {
 
-        createIndexWithTransportClient();
-        createIndexWithHttpClient();
+        createIndexWithTransportClient2();
+//        createIndexWithHttpClient();
     }
 
     private static void createIndexWithHttpClient() throws IOException {
@@ -52,6 +56,23 @@ public class Simple17Client {
                 Client client = new TransportClient().addTransportAddress(new InetSocketTransportAddress("localhost", 9300))
         ) {
             IndexResponse response = client.prepareIndex("twitter", "tweet", "1")
+                    .setSource(jsonBuilder()
+                            .startObject()
+                            .field("user", "kimchy")
+                            .field("postDate", new Date())
+                            .field("message", "trying out Elasticsearch")
+                            .endObject()
+                    )
+                    .execute()
+                    .actionGet();
+        }
+    }
+
+    private static void createIndexWithTransportClient2() throws IOException {
+        try (
+                Client client = (Client)initElasticSearchClient(new String[]{"localhost"}, 9300, "foo", false, false);
+        ) {
+            IndexResponse response = client.prepareIndex(INDEX, TYPE, "1")
                     .setSource(jsonBuilder()
                             .startObject()
                             .field("user", "kimchy")
